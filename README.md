@@ -18,4 +18,4 @@ A simple web tool to analyze network traffic (.pcap) files.
 3. **Database:** `python manage.py migrate`
 4. **Start:** `python manage.py runserver`
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser
