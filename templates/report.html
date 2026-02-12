@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-dark border-start border-4 {% if info.total_threats > 0 %}border-danger{% else %}border-success{% endif %} shadow-sm">
+        <div style="min-width: 0;" class="me-3">
+            <h2 class="text-white mb-0 text-truncate" title="{{ info.file_name }}">
+                Report: {{ info.file_name }}
+            </h2>
+            <small class="text-muted">
+                Analysis completed: {{ info.created_at|date:"H:i, d.m.Y" }}
+            </small>
+        </div>
+        
+        <div class="text-end flex-shrink-0">
+            <h4 class="mb-0 {% if info.total_threats > 0 %}text-danger{% else %}text-success{% endif %}">
+                THREATS: {{ info.total_threats }}
+            </h4>
+            <span class="badge bg-secondary">{{ info.file_size }} MB</span>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card bg-dark text-white border-secondary shadow mb-4">
+                <div class="card-header border-secondary bg-transparent">
+                    <h5 class="card-title mb-0 text-info">Protocol Distribution</h5>
+                </div>
+                <div class="card-body">
+                    {% if results.stats.protocols %}
+                        <canvas id="protocolChart" style="max-height:250px;"></canvas>
+                    {% else %}
+                        <p class="text-muted text-center py-5">No data for chart</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card bg-dark text-white border-secondary shadow">
+                <div class="card-header border-secondary bg-transparent">
+                    <h5 class="card-title mb-0 text-info">General Statistics</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-dark table-hover mb-0">
+                        <tbody>
+                            <tr>
+                                <td>Total Packets</td>
+                                <td class="text-end fw-bold">{{ results.stats.total_packets|default:0 }}</td>
+                            </tr>
+
+                            <tr>
+                                <td>Top IP (Source)</td>
+                                <td class="text-end text-warning">
+                                    {% for ip, count in results.stats.top_ips.items %}
+                                        {% if forloop.first %}{{ ip }}{% endif %}
+                                    {% empty %}
+                                        -
+                                    {% endfor %}
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <td>Probable OS</td>
+                                <td class="text-end text-success">
+                                    {% for os in results.stats.os_map.values %}
+                                        {% if forloop.first %}{{ os }}{% endif %}
+                                    {% empty %}
+                                        Unknown
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card bg-dark text-white border-danger shadow mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">Critical Events</h5>
+                </div>
+                <div class="card-body">
+                    {% if results.threats %}
+                        {% for threat in results.threats %}
+                            <div class="p-2 mb-2 rounded bg-dark border-start border-3 {% if threat.severity == 'Critical' %}border-danger{% else %}border-warning{% endif %}">
+                                <small class="badge {% if threat.severity == 'Critical' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                    {{ threat.severity }}
+                                </small>
+                                <p class="mb-0 mt-1 small">{{ threat.description }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-success small mb-0">
+                            <i class="fa-solid fa-circle-check me-2"></i>No suspicious activity detected.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card bg-dark text-white border-warning shadow mb-4">
+                <div class="card-header bg-transparent border-warning">
+                    <h5 class="card-title mb-0 text-warning">Intercepted Data</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="bg-black p-3" style="max-height: 180px; overflow-y: auto; font-family: monospace;">
+                        {% for cred in results.credentials %}
+                            <div class="text-warning small mb-1">> {{ cred }}</div>
+                        {% empty %}
+                            <div class="text-muted small">No cleartext passwords found.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="text-info border-bottom pb-1 small">DNS History</h6>
+                    <div class="small text-light" style="max-height: 100px; overflow-y: auto;">
+                        {% for dns in results.dns_history %}{{ dns }}<br>{% empty %}No data{% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-info border-bottom pb-1 small">HTTP Hosts</h6>
+                    <div class="small text-light" style="max-height: 100px; overflow-y: auto;">
+                        {% for site in results.http_sites %}{{ site }}<br>{% empty %}No data{% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{ results.stats.protocols|json_script:"protocols-raw" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const protocolsElement = document.getElementById('protocols-raw');
+        
+        if (protocolsElement) {
+            const protocolDataMap = JSON.parse(protocolsElement.textContent);
+            
+            const labels = Object.keys(protocolDataMap);
+            const counts = Object.values(protocolDataMap);
+
+            if (labels.length > 0) {
+                const ctx = document.getElementById('protocolChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Packets',
+                            data: counts,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { 
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                                ticks: { color: '#aaa' } 
+                            },
+                            y: { 
+                                grid: { display: false },
+                                ticks: { color: '#fff' } 
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

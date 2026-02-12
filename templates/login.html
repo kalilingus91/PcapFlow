@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <div class="card p-4 border-info shadow-lg" style="background-color: #0b0f1a;">
+            
+            <div class="text-center mb-4">
+                <i class="fa-solid fa-user-lock fa-3x text-info"></i>
+                <h3 class="mt-3 text-white">Log into your account</h3>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label class="text-muted small mb-1">Login</label>
+                    <input type="text" name="username" class="form-control bg-dark text-white border-secondary" required autofocus>
+                </div>
+
+                <div class="mb-3">
+                    <label class="text-muted small mb-1">Password</label>
+                    <input type="password" name="password" class="form-control bg-dark text-white border-secondary" required>
+                </div>
+
+                <button type="submit" class="btn btn-info w-100 fw-bold mt-2">
+                    Log in <i class="fa-solid fa-right-to-bracket ms-2"></i>
+                </button>
+            </form>
+
+            <hr class="border-secondary my-4">
+
+            <div class="text-center">
+                <p class="text-muted small mb-2">No account yet?</p>
+                <a href="{% url 'register' %}" class="btn btn-outline-success w-100 fw-bold">
+                    <i class="fa-solid fa-user-plus me-2"></i>Sign up
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card p-5 text-center border-secondary shadow-lg" style="background-color: #0b0f1a;">
+            <h2 class="mb-4 text-white">Upload Traffic for Analysis</h2>
+            
+            {% if error %}
+            <div class="alert alert-danger mb-4">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i> {{ error }}
+            </div>
+            {% endif %}
+            
+            <form action="{% url 'analyze_file' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-4 text-start">
+                    <label class="text-muted small mb-2">Select PCAP/PCAPNG file</label>
+                    <input type="file" name="file" class="form-control bg-dark text-white border-secondary" required>
+                </div>
+                <button type="submit" class="btn btn-danger btn-lg w-100 fw-bold">
+                    <i class="fa-solid fa-magnifying-glass-chart me-2"></i>START ANALYSIS
+                </button>
+            </form>
+            
+            <div class="mt-4 text-muted small">
+                <i class="fa-solid fa-circle-info me-1"></i> 
+                Maximum file size depends on server limits.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
