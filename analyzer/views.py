@@ -5,33 +5,33 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import AnalysisReport
 
-# Импортируем наш "мозг" из папки services
+# импорт логики анализатора из папки services
 from .services.pcap_analyzer import run_pcap_analysis
 
-# =========================================================
-# 1. ГЛАВНАЯ СТРАНИЦА (HOME)
-# =========================================================
+
+# 1. ГЛАВНАЯ СТРАНИЦА
+
 def home_view(request):
-    """Отображает страницу загрузки файла."""
+    """отображает страницу загрузки файла."""
     return render(request, 'index.html')
 
-# =========================================================
+
 # 2. АНАЛИЗ ФАЙЛА (CORE LOGIC)
-# =========================================================
+
 def analyze_file(request):
     """
-    Принимает файл, отправляет его в сервис PcapAnalyzer,
+    тут анализатор принимает файл, отправляет и его в сервис PcapAnalyzer,
     сохраняет результат в базу данных.
     """
     if request.method == 'POST' and request.FILES.get('file'):
         uploaded_file = request.FILES['file']
         
         try:
-            # Вызываем наш упрощенный сервис анализа
-            # Он вернет словарь с результатами
+            # вызываем наш упрощенный сервис анализа
+            # он вернет словарь с результатами
             results = run_pcap_analysis(uploaded_file)
             
-            # Создаем запись в базе данных (модель AnalysisReport)
+            # создание записи в базе данных (модель AnalysisReport)
             report = AnalysisReport.objects.create(
                 user=request.user if request.user.is_authenticated else None,
                 file_name=uploaded_file.name,
@@ -40,27 +40,26 @@ def analyze_file(request):
                 total_threats=len(results.get('threats', []))
             )
             
-            # Добавляем сообщение об успехе (появится на странице)
-            messages.success(request, f"Файл {uploaded_file.name} успешно проанализирован!")
+            # добавляем сообщение об успехе 
+            messages.success(request, f" {uploaded_file.name} File succesfully analyzed!")
             
-            # Переходим на страницу с деталями этого отчета
+            # переходим на страницу с деталями этого отчета
             return redirect('report_detail', report_id=report.id)
             
         except Exception as e:
-            # Если что-то пошло не так (ошибка парсинга и т.д.)
+            # на случай если вдруг что-то пошло не так (ошибка парсинга и т.д.)
             return render(request, 'index.html', {'error': f"Ошибка при анализе: {str(e)}"})
             
-    # Если зашли просто через URL или без файла — возвращаем на главную
+    # если зашли просто через URL или без файла возвращаемся на главную
     return redirect('home')
 
-# =========================================================
-# 3. ДЕТАЛЬНЫЙ ОТЧЕТ (REPORT)
-# =========================================================
+
+# 3. REPORT
 def report_detail(request, report_id):
     """Отображает результаты конкретного анализа."""
     report = get_object_or_404(AnalysisReport, pk=report_id)
     
-    # Передаем в шаблон сам отчет и отдельно JSON-данные для удобства
+    # передаем в шаблон сам отчет и отдельно JSON-данные для удобства
     context = {
         'info': report,
         'results': report.results_json,
@@ -68,16 +67,15 @@ def report_detail(request, report_id):
     }
     return render(request, 'report.html', context)
 
-# =========================================================
-# 4. ИСТОРИЯ (HISTORY)
-# =========================================================
+
+# 4. HISTORY
 def history_view(request):
     """Показывает список всех предыдущих анализов пользователя."""
     if request.user.is_authenticated:
-        # Если юзер залогинен — берем только его отчеты
+        # если юзер залогинен - берем только его отчеты
         reports = AnalysisReport.objects.filter(user=request.user).order_by('-created_at')
     else:
-        # Если нет — история пуста (или можно показать сообщение)
+        # если нет - история пуста 
         reports = []
         
     return render(request, 'history.html', {'reports': reports})
@@ -85,7 +83,7 @@ def history_view(request):
 @login_required
 def delete_report(request, report_id):
     if request.method == 'POST':
-        # Находим отчет, принадлежащий именно текущему юзеру
+        # находим отчет, принадлежащий именно текущему юзеру
         report = get_object_or_404(AnalysisReport, id=report_id, user=request.user)
         report.delete()
     return redirect('history')
@@ -93,20 +91,19 @@ def delete_report(request, report_id):
 @login_required
 def clear_history(request):
     if request.method == 'POST':
-        # Удаляем все отчеты текущего пользователя
+        # удаляем все отчеты текущего пользователя
         AnalysisReport.objects.filter(user=request.user).delete()
     return redirect('history')
 
-# =========================================================
-# 5. РЕГИСТРАЦИЯ (AUTH)
-# =========================================================
+# 5. РЕГИСТРАЦИЯ 
+
 def register_view(request):
     """Создание нового аккаунта."""
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user) # Сразу логиним после регистрации
+            login(request, user) # cразу логиним после регистрации
             return redirect('home')
     else:
         form = UserCreationForm()

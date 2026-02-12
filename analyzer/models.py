@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class AnalysisReport(models.Model):
-    # Уровни угроз для удобной фильтрации (поможет в Visualizations)
+    # Уровни угроз для удобной фильтрации
     THREAT_CHOICES = [
         ('SAFE', 'Безопасно'),
         ('LOW', 'Низкий риск'),
@@ -11,7 +11,7 @@ class AnalysisReport(models.Model):
         ('CRITICAL', 'Критический риск'),
     ]
 
-    # Привязка к пользователю (если он вошел в систему)
+    # привязка к пользователю 
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     
     # Основная информация о файле

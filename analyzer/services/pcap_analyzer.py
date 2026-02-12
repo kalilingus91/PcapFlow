@@ -35,8 +35,8 @@ class PcapAnalyzer:
         """Логика анализа сетевых уровней (OSI)."""
         proto_counts = Counter()
         ip_counts = Counter()
-        syn_tracker = Counter()  # Для детекта SYN Flood (L4)
-        os_fingerprints = {}    # Определение ОС (L3)
+        syn_tracker = Counter()  # для детекта SYN Flood на layer4
+        os_fingerprints = {}    # определение ОС на layer3
 
         for pkt in packets:
             if not pkt.haslayer(IP):
@@ -45,30 +45,30 @@ class PcapAnalyzer:
             src_ip = pkt[IP].src
             ip_counts[src_ip] += 1
             
-            # --- L3: OS Fingerprinting (TTL анализ) ---
+            # L3: OS Fingerprinting (TTL анализ) 
             ttl = pkt[IP].ttl
             os_fingerprints[src_ip] = "Linux" if ttl <= 64 else "Windows" if ttl <= 128 else "Network Device"
 
-            # --- L4: Анализ протоколов и DoS ---
+            # L4: Анализ протоколов и DoS
             if pkt.haslayer(TCP):
                 proto_counts['TCP'] += 1
-                if pkt[TCP].flags == "S": # Только SYN пакеты
+                if pkt[TCP].flags == "S": #считаем только SYN пакеты
                     syn_tracker[src_ip] += 1
                 
-                # Детект LDAP (порт 389)
+                # детектор LDAP (на порт 389)
                 if pkt[TCP].dport == 389 or pkt[TCP].sport == 389:
                     if pkt.haslayer(Raw) and b"dc=" in pkt[Raw].load.lower():
                         self._add_threat("Critical", f"LDAP Leak: Unencrypted AD traffic from {src_ip}")
 
             elif pkt.haslayer(UDP):
                 proto_counts['UDP'] += 1
-                # --- L7: DNS ---
+                # L7: DNS 
                 if pkt.haslayer(DNSQR):
                     query = pkt[DNSQR].qname.decode(errors='ignore')
                     if query not in self.results['dns_history']:
                         self.results['dns_history'].append(query)
 
-            # --- L7: HTTP и Пароли ---
+            # L7: HTTP и Пароли
             if pkt.haslayer(HTTPRequest):
                 host = pkt[HTTPRequest].Host.decode(errors='ignore')
                 if host not in self.results['http_sites']:
@@ -79,7 +79,7 @@ class PcapAnalyzer:
                 if any(word in load.upper() for word in ["PASS", "USER", "LOGIN", "PWD"]):
                     self.results['credentials'].append(f"{src_ip} -> {load.strip()[:60]}")
 
-        # Проверка SYN Flood
+        # проверка на SYN Flood
         for ip, count in syn_tracker.items():
             if count > 100:
                 self._add_threat("High", f"Possible SYN Flood from {ip} ({count} packets)")
@@ -97,6 +97,6 @@ class PcapAnalyzer:
         if threat not in self.results['threats']:
             self.results['threats'].append(threat)
 
-# ФУНКЦИЯ, КОТОРУЮ НЕ МОГ НАЙТИ ТВОЙ VIEWS
+
 def run_pcap_analysis(file):
     return PcapAnalyzer(file).analyze()
